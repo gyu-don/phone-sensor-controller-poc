@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "phone-sensor-controller-poc",
+  "main": "src/worker/index.js",
+  "compatibility_date": "2026-10-17",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "SensorRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SensorRoom"] }],
+  "observability": { "enabled": false }
+}

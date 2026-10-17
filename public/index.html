@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f5f3ed"><title>てのひら実験室 — Sensor Play</title><link rel="stylesheet" href="/style.css"><script type="module" src="/display.js"></script></head>
+<body>
+  <main class="lab">
+    <header class="masthead"><a class="brand" href="/" aria-label="ホーム"><span class="brand-mark">↗</span><span>てのひら実験室<small>PHONE SENSOR / PLAY LAB</small></span></a><span class="edition">EXPERIMENT 001 <span class="tag">PoC v3</span></span></header>
+    <section class="intro"><div><p class="eyebrow">スマホを動かす。それが、コントローラー。</p><h1>手の動きを、<br class="mobile-only">あそびに変える。</h1><p class="intro-copy">画面を見るのは、目の前のステージだけ。<br>スマホをそっと動かして、置いて、試してみよう。</p></div><div class="intro-note"><span class="tiny-arrow">↙</span>持ち上げる。動かす。置く。<br><span>小さな動きから、はじめよう。</span></div></section>
+    <div class="workspace">
+      <section class="play-area" aria-label="ゲーム画面">
+        <nav class="mode-tabs" aria-label="実験を選ぶ"><button data-mode="shapes" class="mode-tab active" aria-pressed="true"><span>01</span> かたちを、はめる <b>◯ △ □</b></button><button data-mode="clean" class="mode-tab" aria-pressed="false"><span>02</span> いろを、ふきとる <b>▱</b></button></nav>
+        <div class="stage-topline"><span id="stage-label">SHAPE MATCH</span><span id="stage-count">0 / 3</span></div>
+        <div class="stage-input-status"><span id="hand-status">✋ ひらいている</span><span id="landing-state">着地で操作</span></div><div class="canvas-wrap"><div id="landing-feedback" class="landing-feedback" role="status"></div><canvas id="stage" width="1200" height="480" aria-label="図形を同じ形の穴へ動かすステージ"></canvas><div class="stage-watermark" id="stage-watermark">MOVE WITH YOUR PHONE</div></div>
+        <div class="stage-footer"><p id="game-message" role="status">01 のまるを、まるい穴へ。</p><button id="reset" class="text-button">↻ 最初から</button></div>
+        <div class="instruction-strip"><div><span class="step-no">1</span><p id="step1">スマホを平らに持つ<small>上端をステージの奥へ向ける</small></p></div><div><span class="step-no">2</span><p id="step2">光る図形を穴の方向へ<small>机の上で20〜40cmほど動かす</small></p></div><div><span class="step-no">3</span><p id="step3">そっと置いて、止める<small>だいたい合えば、ぴったり吸着</small></p></div></div>
+      </section>
+      <aside class="pair-panel"><div class="panel-heading"><span class="eyebrow">CONNECT YOUR PHONE</span><span id="room-label">—</span></div><h2>スマホと、つなぐ。</h2><p>カメラでQRを読み取り、<br>「センサーを有効にする」を押す。</p><div class="qr-frame" id="qr" aria-label="コントローラー接続用QRコード"><span class="qr-loading">ルームを準備中…</span></div><div class="connection" role="status"><span id="connection-dot" class="dot"></span><span id="connection-text">ルームを準備中</span></div><button id="copy-url" class="outline-button" disabled>接続URLをコピー <span>↗</span></button><button id="retry-room" class="text-button" hidden>接続をやり直す</button><p id="pair-error" class="error" role="alert"></p><div class="pair-note"><span>◎</span><p>接続後は、スマホを見ずに遊べます。<br>操作するスマホは1台だけ。</p></div></aside>
+    </div>
+    <details class="diagnostics" id="diagnostics"><summary><span>調整とセンサー診断</span><span class="diagnostic-summary" id="sensor-summary">センサー待機中</span><span>＋</span></summary><div class="diagnostic-content"><div class="settings"><p>パラメータの調整は、スマホの<b>「センサーの調整」</b>から行います。調整中は入力を停止し、閉じると再校正します。</p><p id="settings-summary">スマホからの設定を待っています。</p></div><div class="telemetry"><div><span>センサー</span><strong id="telemetry-hz">— Hz</strong></div><div><span>受信</span><strong id="telemetry-rx">0 packets</strong></div><div><span>動作</span><strong id="telemetry-motion">—</strong></div><div><span>着地判定</span><strong id="telemetry-land">—</strong></div><div><span>加速度 X / Y / Z</span><strong id="telemetry-accel">—</strong></div><div><span>推定移動 ΔX / ΔY</span><strong id="telemetry-delta">—</strong></div><div><span>生の加速度 X / Y / Z</span><strong id="telemetry-raw">—</strong></div><div><span>推定速度 X / Y</span><strong id="telemetry-velocity">—</strong></div></div><div class="test-note"><span class="tag">実験メモ</span><p>位置は短い動きからの概算です。<br>傾きやゆっくりした移動ではずれます。<br>止まるたびに速度をゼロへ補正します。</p><button id="export-log" class="text-button">診断ログを保存 ↓</button></div></div></details>
+    <footer class="page-footer"><span>てのひら実験室 <span class="muted">/ SENSOR CONTROLLER PROOF OF CONCEPT</span></span><span>1 PLAYER · UP TO 20 Hz · CLOUDFLARE WORKERS</span></footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#203d36"><title>コントローラー — てのひら実験室</title><link rel="stylesheet" href="/style.css"><script type="module" src="/controller.js"></script></head>
+<body class="controller-body"><main class="controller">
+  <header class="controller-header"><span class="brand-mark">↗</span><span>てのひら実験室<small>PHONE CONTROLLER / v3</small></span></header>
+  <div class="controller-state"><span class="dot" id="controller-dot"></span><span id="controller-connection" role="status">接続を準備中</span></div>
+  <div class="phone-illustration" aria-hidden="true"><div class="phone-line"><span>↑</span><i></i></div><span class="motion-line left">〰</span><span class="motion-line right">〰</span></div>
+  <p class="eyebrow">YOUR PHONE IS THE CONTROLLER</p><h1 id="controller-title">準備ができたら、<br>スマホを置こう。</h1>
+  <p id="controller-instruction" class="controller-copy">スマホを平らな面に置き、<br>上端をゲーム画面の奥へ向けてください。</p>
+  <button class="primary-button" id="enable" disabled>センサーを有効にする <span>↗</span></button>
+  <p id="sensor-status" class="sensor-status" role="status">接続中…</p><p id="controller-error" class="controller-error" role="alert"></p>
+  <button class="controller-secondary" id="recalibrate" hidden>◎ ここで再校正する</button><button class="controller-secondary" id="retry-connection" hidden>接続をやり直す</button>
+  <details class="controller-tuning" id="tuning">
+    <summary>⚙ センサーの調整 <span>開く / 閉じる</span></summary>
+    <div class="tuning-body">
+      <p class="tuning-notice">調整中はゲーム入力を一時停止します。変更した値はこのスマホに保存されます。閉じると再校正して戻ります。</p>
+      <div class="tuning-recipe"><b>反応しないとき</b><p>「小さな動きの無視」を下げる → 次に「移動の感度」を上げる。</p><b>斜めの向きが変なとき</b><p>左右・上下の倍率を両方1.0×に戻し、スマホを平らにして再校正。</p></div>
+      <div class="local-sensor"><div><b>センサー入力の確認</b><span id="local-reason">センサー待機中</span><dl><dt>生の加速度 X / Y / Z</dt><dd id="local-raw">—</dd><dt>補正後の加速度 X / Y</dt><dd id="local-filtered">—</dd><dt>推定速度 X / Y</dt><dd id="local-velocity">—</dd><dt>取得頻度</dt><dd id="local-hz">—</dd></dl></div><canvas id="sensor-vector" width="140" height="130" aria-label="生の加速度と補正後の加速度の方向"></canvas><p>細線＝生のX/Y、太線＝補正後のX/Y。入力確認用で、ゲームの位置は表示しません。数値が動くのに反応しないときは「小さな動きの無視」を下げます。</p></div>
+      <h2>移動の大きさ・反応</h2><div id="tuning-movement"></div>
+      <div class="tuning-checks"><label><input type="checkbox" id="tune-invertX"> 左右を反転</label><label><input type="checkbox" id="tune-invertY"> 上下を反転</label><p>スマホを動かした方向と画面の方向が逆のときにオン。</p></div>
+      <details class="tuning-section"><summary>着地の調整</summary><div id="tuning-landing"></div></details>
+      <details class="tuning-section"><summary>流れ・遅れ・静止判定の微調整</summary><div id="tuning-advanced"></div><div class="tuning-checks"><label><input type="checkbox" id="tune-planeCorrection"> 傾きを補正して水平面へ変換</label><p>平らに動かしているのに方向が不自然な場合は、オフも比較してください。閉じた後に再校正します。</p></div></details>
+      <p id="tuning-saved" class="tuning-saved" role="status">設定はこのスマホに保存されます</p>
+      <button id="tuning-reset" class="controller-secondary">すべて初期値に戻す</button>
+      <button id="tuning-apply" class="primary-button">反映して再校正 <span>↗</span></button>
+    </div>
+  </details>
+  <div class="controller-footnote"><span>画面を見なくても、大丈夫。</span><p>設定したら、目線はゲーム画面へ。<br>スマホの落下や強い衝撃に気をつけてください。</p></div>
+</main></body></html>

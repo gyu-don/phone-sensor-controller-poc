@@ -1,0 +1,21 @@
+{
+  "name": "phone-sensor-controller-poc",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "pnpm build && wrangler dev --ip 0.0.0.0",
+    "deploy": "pnpm build && wrangler deploy",
+    "check": "node --check src/worker/index.js && node --check src/client/display.js && node --check src/client/controller.js && node --check src/client/controller-tuning.js && node --check src/shared/tuning.js",
+    "test": "node --test --test-isolation=none tests/*.test.js",
+    "test:integration": "node scripts/integration.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10",
+    "qrcode-generator": "^2.0.4",
+    "wrangler": "^4.45.0"
+  }
+}
