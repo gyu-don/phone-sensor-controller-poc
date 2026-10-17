@@ -1,7 +1,5 @@
 # スマホセンサー・コントローラー PoC
 
-公開版: https://phone-sensor-controller-poc.gyu-don.workers.dev （PCで開いてQRをスマホで読み取る。開発用証明書の設定は不要。）
-
 机の上でスマホを短く動かすことが、ゲームの入力として成立するかを試すための2つの実験です。
 
 - **かたちを、はめる**: 手のカーソルを図形へ動かし、スマホの着地で「にぎる／離す」を交互に切り替えます。にぎると近くの図形をつかみ、次の着地で離します。方向・移動量がだいたい合えば同じ形の穴に吸着。好きな順に3つ置くと完了。
@@ -15,10 +13,6 @@
 pnpm exec wrangler login
 pnpm deploy
 ```
-
-表示された `https://phone-sensor-controller-poc.<subdomain>.workers.dev` をPCで開き、QRをスマホで読み取ります。公開版は通常のHTTPSなので、開発用証明書の追加は不要です。Workers FreeのままSQLite-backed Durable Objectsを使います。有料プランへの変更、外部のQRサービス、D1、KV、R2は不要です。
-
-ローカルでPC画面を確認する場合は `pnpm dev`。スマホの実機センサーを試す場合はHTTPSの公開版を使用してください。
 
 ## センサー判定の範囲と限界
 
