@@ -9,7 +9,7 @@
     "build": "node scripts/build.mjs",
     "dev": "pnpm build && wrangler dev --ip 0.0.0.0",
     "deploy": "pnpm build && wrangler deploy",
-    "check": "node --check src/worker/index.js && node --check src/client/display.js && node --check src/client/controller.js && node --check src/client/controller-tuning.js && node --check src/shared/tuning.js",
+    "check": "node --check src/worker/index.js && node --check src/worker/mcp.js && node --check src/client/display.js && node --check src/client/controller.js && node --check src/client/controller-tuning.js && node --check src/shared/tuning.js && node --check src/shared/game-events.js",
     "test": "node --test --test-isolation=none tests/*.test.js",
     "test:integration": "node scripts/integration.mjs"
   },

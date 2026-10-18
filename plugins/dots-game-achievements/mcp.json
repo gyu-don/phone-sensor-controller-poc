@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "gameEvents": {
+      "type": "streamable-http",
+      "url": "https://phone-sensor-controller-poc.gyu-don.workers.dev/mcp",
+      "extensions": {
+        "com.openai": {
+          "auth": { "type": "none" }
+        }
+      }
+    }
+  }
+}

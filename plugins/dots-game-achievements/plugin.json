@@ -1,0 +1,26 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "dots-game-achievements",
+  "version": "0.1.0",
+  "description": "ゲームの実績イベントを購読し、Dotがプレイヤーに反応できるようにします。",
+  "author": {
+    "name": "てのひら実験室"
+  },
+  "keywords": ["game", "achievement", "mcp-events", "dots"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "ゲーム実績イベント",
+        "shortDescription": "ゲームの実績をDotに届けます",
+        "longDescription": "ゲーム実績イベントを購読し、プレイヤーの達成にあわせてDotが返答します。",
+        "developerName": "てのひら実験室",
+        "category": "Games",
+        "capabilities": ["Read"],
+        "brandColor": "#355f4e",
+        "defaultPrompt": [
+          "achievement.unlockedを購読して、初めてのクリアを受け取ったらプレイヤーをほめてください。"
+        ]
+      }
+    }
+  }
+}

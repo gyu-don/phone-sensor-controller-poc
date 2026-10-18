@@ -5,6 +5,8 @@
   <main class="lab">
     <header class="masthead"><a class="brand" href="/" aria-label="ホーム"><span class="brand-mark">↗</span><span>てのひら実験室<small>PHONE SENSOR / PLAY LAB</small></span></a><span class="edition">EXPERIMENT 001 <span class="tag">PoC v3</span></span></header>
     <section class="intro"><div><p class="eyebrow">スマホを動かす。それが、コントローラー。</p><h1>手の動きを、<br class="mobile-only">あそびに変える。</h1><p class="intro-copy">画面を見るのは、目の前のステージだけ。<br>スマホをそっと動かして、置いて、試してみよう。</p></div><div class="intro-note"><span class="tiny-arrow">↙</span>持ち上げる。動かす。置く。<br><span>小さな動きから、はじめよう。</span></div></section>
+    <nav class="page-tabs" role="tablist" aria-label="画面を選ぶ"><button class="page-tab active" id="game-tab" role="tab" aria-selected="true" aria-controls="game-panel" data-page="game-panel">ゲーム</button><button class="page-tab" id="events-tab" role="tab" aria-selected="false" aria-controls="events-panel" data-page="events-panel">イベント送信 <span>MCP</span></button></nav>
+    <section id="game-panel" role="tabpanel" aria-labelledby="game-tab">
     <div class="workspace">
       <section class="play-area" aria-label="ゲーム画面">
         <nav class="mode-tabs" aria-label="実験を選ぶ"><button data-mode="shapes" class="mode-tab active" aria-pressed="true"><span>01</span> かたちを、はめる <b>◯ △ □</b></button><button data-mode="clean" class="mode-tab" aria-pressed="false"><span>02</span> いろを、ふきとる <b>▱</b></button></nav>
@@ -16,6 +18,17 @@
       <aside class="pair-panel"><div class="panel-heading"><span class="eyebrow">CONNECT YOUR PHONE</span><span id="room-label">—</span></div><h2>スマホと、つなぐ。</h2><p>カメラでQRを読み取り、<br>「センサーを有効にする」を押す。</p><div class="qr-frame" id="qr" aria-label="コントローラー接続用QRコード"><span class="qr-loading">ルームを準備中…</span></div><div class="connection" role="status"><span id="connection-dot" class="dot"></span><span id="connection-text">ルームを準備中</span></div><button id="copy-url" class="outline-button" disabled>接続URLをコピー <span>↗</span></button><button id="retry-room" class="text-button" hidden>接続をやり直す</button><p id="pair-error" class="error" role="alert"></p><div class="pair-note"><span>◎</span><p>接続後は、スマホを見ずに遊べます。<br>操作するスマホは1台だけ。</p></div></aside>
     </div>
     <details class="diagnostics" id="diagnostics"><summary><span>調整とセンサー診断</span><span class="diagnostic-summary" id="sensor-summary">センサー待機中</span><span>＋</span></summary><div class="diagnostic-content"><div class="settings"><p>パラメータの調整は、スマホの<b>「センサーの調整」</b>から行います。調整中は入力を停止し、閉じると再校正します。</p><p id="settings-summary">スマホからの設定を待っています。</p></div><div class="telemetry"><div><span>センサー</span><strong id="telemetry-hz">— Hz</strong></div><div><span>受信</span><strong id="telemetry-rx">0 packets</strong></div><div><span>動作</span><strong id="telemetry-motion">—</strong></div><div><span>着地判定</span><strong id="telemetry-land">—</strong></div><div><span>加速度 X / Y / Z</span><strong id="telemetry-accel">—</strong></div><div><span>推定移動 ΔX / ΔY</span><strong id="telemetry-delta">—</strong></div><div><span>生の加速度 X / Y / Z</span><strong id="telemetry-raw">—</strong></div><div><span>推定速度 X / Y</span><strong id="telemetry-velocity">—</strong></div></div><div class="test-note"><span class="tag">実験メモ</span><p>位置は短い動きからの概算です。<br>傾きやゆっくりした移動ではずれます。<br>止まるたびに速度をゼロへ補正します。</p><button id="export-log" class="text-button">診断ログを保存 ↓</button></div></div></details>
+    </section>
+    <section class="events-panel" id="events-panel" role="tabpanel" aria-labelledby="events-tab" hidden>
+      <div class="events-intro"><p class="eyebrow">MCP EVENTS / WEBHOOK TEST</p><h2>ゲームの出来事を、Dotへ届ける。</h2><p>イベントを購読中のWorkチャットやDotsへ、JSONをWebhookで送ります。最初にWorkまたはDotsで購読を開始してから、ここでイベントを送信してください。</p></div>
+      <div class="mcp-endpoint"><div><span class="eyebrow">MCP SERVER</span><code id="mcp-url">読み込み中…</code></div><button class="outline-button" id="copy-mcp-url">URLをコピー ↗</button></div>
+      <label class="event-editor-label" for="event-json">テストイベント JSON</label>
+      <textarea id="event-json" class="event-editor" spellcheck="false" aria-describedby="event-help"></textarea>
+      <p id="event-help" class="event-help">eventIdは送信ごとに一意にしてください。同じIDの再送は重複として扱われます。フィールドは自由に書き換えられます。</p>
+      <div class="event-actions"><button class="text-button" id="reset-event">デフォルトに戻す</button><button class="primary-button event-send" id="send-event">イベントを送信 <span>↗</span></button></div>
+      <p class="event-status" id="event-status" role="status" aria-live="polite">まだイベントを送信していません。</p>
+      <div class="subscribe-guide"><span class="step-no">1</span><p><b>WorkまたはDotsで購読</b><br><code>@Dots</code>を選び、「achievement.unlockedを購読して、初めてのクリアを受け取ったらプレイヤーをほめて」と伝えます。</p><span class="step-no">2</span><p><b>ここからイベント送信</b><br>JSONの内容が購読先に届き、Dotsが受信イベントに応じて返答します。</p></div>
+    </section>
     <footer class="page-footer"><span>てのひら実験室 <span class="muted">/ SENSOR CONTROLLER PROOF OF CONCEPT</span></span><span>1 PLAYER · UP TO 20 Hz · CLOUDFLARE WORKERS</span></footer>
   </main>
 </body>

@@ -9,8 +9,14 @@
     "run_worker_first": ["/api/*"]
   },
   "durable_objects": {
-    "bindings": [{ "name": "ROOMS", "class_name": "SensorRoom" }]
+    "bindings": [
+      { "name": "ROOMS", "class_name": "SensorRoom" },
+      { "name": "GAME_EVENTS", "class_name": "GameEventStore" }
+    ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SensorRoom"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["SensorRoom"] },
+    { "tag": "v2", "new_sqlite_classes": ["GameEventStore"] }
+  ],
   "observability": { "enabled": false }
 }

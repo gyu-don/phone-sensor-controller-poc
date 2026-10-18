@@ -4,6 +4,19 @@ import { RoomSocket } from './transport.js';
 import { validInput, validSettings } from '../shared/protocol.js';
 
 const $ = id => document.getElementById(id);
+const DEFAULT_GAME_EVENT = {
+  eventId: 'evt_boss_clear_001',
+  name: 'achievement.unlocked',
+  timestamp: '2026-10-18T02:00:00Z',
+  data: {
+    achievement_id: 'first_boss',
+    achievement_name: '初めてのボス撃破',
+    attempts: 12,
+    is_first_clear: true,
+    description: '12回の挑戦を経て最初のボスを倒した'
+  },
+  cursor: null
+};
 const canvas = $('stage'), ctx = canvas.getContext('2d');
 const game = new Game();
 let roomInfo, socket, controllerPresent = false, networkReady = false, sensorStatus = '';
@@ -86,6 +99,63 @@ $('export-log').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), config: phoneConfig, note: 'Coordinates are estimated canvas pixels, not measured distance.', frames: log }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob), a = document.createElement('a');
   a.href = url; a.download = `sensor-poc-${Date.now()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+document.querySelectorAll('[data-page]').forEach(tab => tab.addEventListener('click', () => {
+  document.querySelectorAll('[data-page]').forEach(item => {
+    const active = item === tab;
+    item.classList.toggle('active', active);
+    item.setAttribute('aria-selected', String(active));
+  });
+  document.querySelectorAll('[role="tabpanel"]').forEach(panel => { panel.hidden = panel.id !== tab.dataset.page; });
+}));
+
+$('event-json').value = JSON.stringify(DEFAULT_GAME_EVENT, null, 2);
+$('mcp-url').textContent = new URL('/mcp', location.href).href;
+$('reset-event').addEventListener('click', () => {
+  $('event-json').value = JSON.stringify(DEFAULT_GAME_EVENT, null, 2);
+  $('event-status').textContent = 'デフォルトのテストイベントに戻しました。';
+  $('event-status').className = 'event-status';
+});
+$('copy-mcp-url').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText($('mcp-url').textContent);
+    $('event-status').textContent = 'MCPサーバーURLをコピーしました。';
+    $('event-status').className = 'event-status';
+  } catch {
+    $('event-status').textContent = 'このページのURLはコピーできませんでした。テキストを選択してコピーしてください。';
+    $('event-status').className = 'event-status error';
+  }
+});
+$('send-event').addEventListener('click', async () => {
+  const button = $('send-event'), status = $('event-status');
+  let event;
+  try { event = JSON.parse($('event-json').value); }
+  catch { status.textContent = 'JSONの形式を確認してください。'; status.className = 'event-status error'; return; }
+  button.disabled = true;
+  status.textContent = 'イベントを送信しています…';
+  status.className = 'event-status';
+  try {
+    const response = await fetch('/api/game-events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    if (result.duplicate) {
+      status.textContent = `同じeventIdのイベントは送信済みです（${event.eventId}）。新しいIDに変えると別イベントとして届きます。`;
+      status.className = 'event-status error';
+    } else {
+      status.textContent = `送信しました · cursor ${result.event.cursor} · ${result.event.name} · 購読中のWork/Dotsへ配信します。`;
+      status.className = 'event-status success';
+    }
+  } catch (error) {
+    status.textContent = `送信できませんでした: ${error.message}`;
+    status.className = 'event-status error';
+  } finally {
+    button.disabled = false;
+  }
 });
 $('copy-url').addEventListener('click', async () => {
   const value = controllerUrl;

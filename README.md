@@ -14,6 +14,44 @@ pnpm exec wrangler login
 pnpm deploy
 ```
 
+## Dotへゲーム実績を届ける
+
+Workersの `/mcp` はMCP Streamable HTTPとMCP Events (`2026-07-28`) を提供します。`/api/game-events` がゲーム側の送信先です。ゲーム画面上部の **「イベント送信」** タブにサンプルJSONが入り、編集・送信できます。`cursor` はサーバー側で採番します。
+
+このPoCではイベントを最大100件、購読を最大24時間Durable Objectへ保存します。イベント送信後、条件が合う有効な購読先へ署名付きHTTPS webhookを送り、失敗時は一時エラーに限り再試行します。認証はありません。ゲームイベントはひとつの公開イベントストリームを共有するため、URLを知るクライアントはイベントを送信でき、MCPツールから最近のイベントを読めます。送信は全体で毎分60件までです。MCPイベントの購読先は `chatgpt.com` / `openai.com` のHTTPSホストに限定します。
+
+### クラウド版Workに登録する
+
+ローカルのマーケットプレイスへのインストールだけでは、クラウド版Workへの登録は完了しません。公開WorkerをChatGPTのカスタムMCPサーバーとして接続します。
+
+1. 利用するアカウント・ワークスペースで [ChatGPT Plugins](https://chatgpt.com/plugins) を開き、`＋` → **Add custom MCP server** を選びます。
+2. 名前を **ゲーム実績イベント**、Server URLを `https://phone-sensor-controller-poc.gyu-don.workers.dev/mcp`、Authenticationを **No authentication** に設定して作成します。
+3. 既存の **カスタムイベントPoC** が同じURLに接続されている場合は、その接続を **Refresh** して利用します。
+4. プラグイン詳細で `get_recent_game_events` に加え、イベント `achievement.unlocked` が検出されていることを確認し、インストールします。
+5. 新しいWorkチャット（デスクトップではCloud）でそのプラグインを選び、「achievement.unlockedを購読して、届いたら達成内容に合わせてほめて」と依頼します。
+6. 購読成立後にゲーム画面のイベント送信タブから送信します。再送テストでは `eventId` を変更してください。同じIDは重複として配信されません。
+
+購読は通常のMCPツールとは別のイベント機能です。ツール一覧だけで購読可否を判断せず、イベント一覧と実際の購読・受信を確認してください。
+
+公式手順: [接続・更新](https://developers.openai.com/plugins/deploy/connect-chatgpt)、[MCP Events](https://developers.openai.com/plugins/build/mcp-events)。
+
+### ローカル版Work・Codexに追加する
+
+`plugins/dots-game-achievements/mcp.json` は本番Workerの `https://phone-sensor-controller-poc.gyu-don.workers.dev/mcp` を参照します。ローカルカタログをCodexへ追加し、ChatGPTデスクトップを再起動してPlugins Directoryから **「ゲーム実績イベント」** をインストールします。
+
+```sh
+codex plugin marketplace add .
+codex plugin add dots-game-achievements@te-no-hira-lab
+```
+
+ローカルにインストールした後は、ChatGPTデスクトップでPlugins Directoryを更新し、新しいチャットから利用してください。画面に出ない場合はデスクトップアプリを再起動します。クラウド版でのイベント購読には、上記のChatGPT側の接続を利用してください。
+
+### Dotから購読する
+
+WorkチャットでDotsを選び、イベントタブにある例のように、`achievement.unlocked` を購読して達成を受け取ったらプレイヤーをほめるよう頼みます。購読を始めてからJSONを送信すると、そのWorkチャットへイベントがプッシュされます。デスクトップ版WorkではCloud実行を選択してください。
+
+`get_recent_game_events` ツールもあり、直近のイベントを確認できます。イベント中の文章はゲームデータとして扱い、指示として実行しません。
+
 ## センサー判定の範囲と限界
 
 これは絶対位置を計測する仕組みではありません。端末の加速度から短いストロークの概算移動を作り、「ゲーム入力として成立するか」を評価します。

@@ -1,0 +1,20 @@
+{
+  "name": "te-no-hira-lab",
+  "interface": {
+    "displayName": "てのひら実験室"
+  },
+  "plugins": [
+    {
+      "name": "dots-game-achievements",
+      "source": {
+        "source": "local",
+        "path": "./plugins/dots-game-achievements"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

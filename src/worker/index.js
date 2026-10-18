@@ -1,13 +1,34 @@
 import { DurableObject } from 'cloudflare:workers';
 import { ROOM_TTL_MS, TOKEN_RE, CLIENT_RE, MAX_MESSAGE_BYTES, validInput, validConfig, validSettings } from '../shared/protocol.js';
 import { normalizeTuning } from '../shared/tuning.js';
+import { normalizeGameEvent, MAX_GAME_EVENT_BYTES } from '../shared/game-events.js';
+import { handleMcpRequest, queueEventNotifications } from './mcp.js';
 
 const json = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
 const token = () => crypto.randomUUID().replaceAll('-', '');
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === '/mcp') return handleMcpRequest(request, env, ctx);
+    if (url.pathname === '/api/game-events' && request.method === 'POST') {
+      const origin = request.headers.get('Origin');
+      if (origin && origin !== url.origin) return json({ error: 'Origin mismatch' }, 403);
+      const raw = await request.text();
+      if (new TextEncoder().encode(raw).byteLength > MAX_GAME_EVENT_BYTES) return json({ error: 'Event is too large' }, 413);
+      let submitted;
+      try { submitted = JSON.parse(raw); } catch { return json({ error: 'Invalid JSON' }, 400); }
+      let event;
+      try { event = normalizeGameEvent(submitted); } catch (error) { return json({ error: error.message }, 400); }
+      const stub = env.GAME_EVENTS.get(env.GAME_EVENTS.idFromName('global-game-events'));
+      const stored = await stub.fetch('https://events.internal/events/ingest', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event })
+      });
+      if (!stored.ok) return json({ error: 'Event could not be stored' }, 503);
+      const result = await stored.json();
+      queueEventNotifications(result, env, ctx);
+      return json({ ok: true, event: result.event, duplicate: result.duplicate });
+    }
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     // Browsers must pair from the same origin. There is no public CORS relay.
     const origin = request.headers.get('Origin');
@@ -112,5 +133,126 @@ export class SensorRoom extends DurableObject {
     for (const s of this.ctx.getWebSockets()) s.close(4004, 'Room expired');
     this.meta = null;
     await this.ctx.storage.deleteAll();
+  }
+}
+
+export class GameEventStore extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    this.ctx = ctx;
+  }
+
+  async scheduleCleanup(subscriptions = null) {
+    const active = (subscriptions ?? await this.ctx.storage.get('subscriptions') ?? []).filter(item => item.expiresAt > Date.now());
+    if (active.length) await this.ctx.storage.setAlarm(Math.min(...active.map(item => item.expiresAt)));
+    else await this.ctx.storage.deleteAlarm();
+  }
+
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (request.method !== 'POST') return json({ error: 'POST required' }, 405);
+    let body;
+    try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+    if (url.pathname === '/callbacks/is-verified') {
+      const callbacks = await this.ctx.storage.get('verifiedCallbacks') ?? {};
+      const now = Date.now();
+      for (const [fingerprint, expiresAt] of Object.entries(callbacks)) if (expiresAt <= now) delete callbacks[fingerprint];
+      await this.ctx.storage.put('verifiedCallbacks', callbacks);
+      return json({ verified: callbacks[body.fingerprint] > now });
+    }
+
+    if (url.pathname === '/callbacks/mark-verified') {
+      const callbacks = await this.ctx.storage.get('verifiedCallbacks') ?? {};
+      callbacks[body.fingerprint] = body.expiresAt;
+      await this.ctx.storage.put('verifiedCallbacks', callbacks);
+      return json({ ok: true });
+    }
+
+    if (url.pathname === '/events/ingest') {
+      const event = body?.event;
+      if (!event || typeof event.eventId !== 'string') return json({ error: 'Invalid event' }, 400);
+      const now = Date.now();
+      let rate = await this.ctx.storage.get('ingestRate') ?? { start: now, count: 0 };
+      if (now - rate.start >= 60_000) rate = { start: now, count: 0 };
+      if (rate.count >= 60) return json({ error: 'Event submission limit reached; retry later.' }, 429);
+      rate.count++;
+      await this.ctx.storage.put('ingestRate', rate);
+      const events = await this.ctx.storage.get('events') ?? [];
+      const duplicate = events.find(saved => saved.eventId === event.eventId);
+      if (duplicate) return json({ event: duplicate, duplicate: true, subscriptions: [] });
+      const sequence = (await this.ctx.storage.get('sequence') ?? 0) + 1;
+      const storedEvent = { ...event, cursor: String(sequence) };
+      events.push(storedEvent);
+      if (events.length > 100) events.splice(0, events.length - 100);
+      await this.ctx.storage.put({ events, sequence });
+      const subscriptions = (await this.ctx.storage.get('subscriptions') ?? [])
+        .filter(subscription => subscription.expiresAt > now && subscription.name === storedEvent.name)
+        .filter(subscription => subscription.arguments.achievement_id === undefined || subscription.arguments.achievement_id === storedEvent.data.achievement_id)
+        .filter(subscription => subscription.arguments.is_first_clear === undefined || subscription.arguments.is_first_clear === storedEvent.data.is_first_clear);
+      return json({ event: storedEvent, duplicate: false, subscriptions });
+    }
+
+    if (url.pathname === '/events/recent') {
+      const events = await this.ctx.storage.get('events') ?? [];
+      const limit = Math.max(1, Math.min(50, Number.isInteger(body.limit) ? body.limit : 10));
+      const after = body.afterCursor === null ? null : Number(body.afterCursor);
+      const selected = after === null ? events.slice(-limit) : events.filter(event => Number(event.cursor) > after).slice(0, limit);
+      const oldest = events.length ? Number(events[0].cursor) : 0;
+      const latest = await this.ctx.storage.get('sequence') ?? 0;
+      return json({ events: selected, latest_cursor: latest ? String(latest) : null, truncated: after !== null && after < oldest - 1 });
+    }
+
+    if (url.pathname === '/subscriptions/upsert') {
+      const subscriptions = (await this.ctx.storage.get('subscriptions') ?? []).filter(item => item.expiresAt > Date.now());
+      const sequence = await this.ctx.storage.get('sequence') ?? 0;
+      const existingIndex = subscriptions.findIndex(subscription => subscription.id === body.subscription?.id);
+      const previous = existingIndex < 0 ? null : subscriptions[existingIndex];
+      const cursor = body.cursor === null || body.cursor === undefined ? previous?.cursor ?? (sequence ? String(sequence) : null) : body.cursor;
+      const subscription = { ...body.subscription, cursor };
+      if (existingIndex < 0 && subscriptions.length >= 200) return json({ error: 'Subscription limit reached' }, 429);
+      if (existingIndex < 0) subscriptions.push(subscription);
+      else subscriptions[existingIndex] = subscription;
+      await this.ctx.storage.put('subscriptions', subscriptions);
+      await this.scheduleCleanup(subscriptions);
+      const events = await this.ctx.storage.get('events') ?? [];
+      const oldest = events.length ? Number(events[0].cursor) : 0;
+      const truncated = cursor !== null && events.length > 0 && Number(cursor) < oldest - 1;
+      const replay = cursor === null ? [] : events.filter(event => Number(event.cursor) > Number(cursor))
+        .filter(event => event.name === subscription.name)
+        .filter(event => subscription.arguments.achievement_id === undefined || subscription.arguments.achievement_id === event.data.achievement_id)
+        .filter(event => subscription.arguments.is_first_clear === undefined || subscription.arguments.is_first_clear === event.data.is_first_clear);
+      return json({ subscription, replay, truncated });
+    }
+
+    if (url.pathname === '/subscriptions/advance') {
+      const subscriptions = await this.ctx.storage.get('subscriptions') ?? [];
+      const subscription = subscriptions.find(item => item.id === body.id);
+      if (subscription && Number(body.cursor) > Number(subscription.cursor ?? 0)) {
+        subscription.cursor = String(body.cursor);
+        await this.ctx.storage.put('subscriptions', subscriptions);
+      }
+      return json({ ok: true });
+    }
+
+    if (url.pathname === '/subscriptions/delete') {
+      const subscriptions = await this.ctx.storage.get('subscriptions') ?? [];
+      const remaining = subscriptions.filter(item => item.id !== body.id);
+      await this.ctx.storage.put('subscriptions', remaining);
+      await this.scheduleCleanup(remaining);
+      return json({ ok: true });
+    }
+
+    return json({ error: 'Not found' }, 404);
+  }
+
+  async alarm() {
+    const now = Date.now();
+    const subscriptions = (await this.ctx.storage.get('subscriptions') ?? []).filter(item => item.expiresAt > now);
+    await this.ctx.storage.put('subscriptions', subscriptions);
+    const callbacks = await this.ctx.storage.get('verifiedCallbacks') ?? {};
+    for (const [fingerprint, expiresAt] of Object.entries(callbacks)) if (expiresAt <= now) delete callbacks[fingerprint];
+    await this.ctx.storage.put('verifiedCallbacks', callbacks);
+    await this.scheduleCleanup(subscriptions);
   }
 }
